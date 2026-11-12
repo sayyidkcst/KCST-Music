@@ -11,7 +11,12 @@
 <meta name="apple-mobile-web-app-title" content="KCST Music">
 <title>KCST Music Player</title>
 <script>
-  /* Apply saved theme before first paint */
+  /* Apply saved theme + saved login before first paint */
+  try {
+    if (/^\d{4}$/.test(localStorage.getItem('kcst-login-code') || '')) {
+      document.documentElement.classList.add('has-saved-login');
+    }
+  } catch (e) {}
   try {
     if (localStorage.getItem('kcst-theme') === 'light') {
       document.documentElement.setAttribute('data-theme', 'light');
@@ -215,52 +220,6 @@
   /* Hide the main app until authed */
   .app-hidden { display: none !important; }
 
-  /* User badge in header */
-  .brand-user {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px 6px 12px;
-    border-radius: 999px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--text-soft);
-    white-space: nowrap;
-  }
-
-  .brand-user .dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #34d399;
-    box-shadow: 0 0 8px #34d399;
-    flex-shrink: 0;
-  }
-
-  .brand-user .code-text {
-    font-weight: 600;
-    letter-spacing: .08em;
-    color: var(--text);
-  }
-
-  .brand-user .logout {
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    color: var(--muted);
-    transition: color .15s, background .15s;
-  }
-
-  .brand-user .logout:hover {
-    color: #f87171;
-    background: rgba(239,68,68,.10);
-  }
-
-  .brand-user .logout svg { width: 13px; height: 13px; }
-
   /* ---------- Header ---------- */
   .brand-header {
     display: flex;
@@ -321,35 +280,6 @@
     display: flex;
     align-items: center;
     gap: 10px;
-  }
-
-  .brand-contact {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 12px;
-    border-radius: 999px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-soft);
-    white-space: nowrap;
-    text-decoration: none;
-    transition: background .15s, border-color .15s, color .15s;
-  }
-
-  .brand-contact:hover {
-    background: var(--surface-3);
-    border-color: var(--border-strong);
-    color: var(--text);
-  }
-
-  .brand-contact svg {
-    width: 14px;
-    height: 14px;
-    color: var(--accent);
-    flex-shrink: 0;
   }
 
   /* ---------- App grid ---------- */
@@ -1229,7 +1159,7 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    button, .playlist-item, .brand-contact {
+    button, .playlist-item {
       touch-action: manipulation;
       -webkit-user-select: none;
       user-select: none;
@@ -1279,16 +1209,7 @@
     .brand-text p { display: none; }
     .brand-header-right { gap: 8px; flex-shrink: 0; }
 
-    /* call button becomes icon-only */
-    .brand-contact { font-size: 0; gap: 0; padding: 8px; }
-    .brand-contact svg { width: 16px; height: 16px; }
-
     .brand-footer { display: none; }
-
-    @media (max-width: 420px) {
-      .brand-text { display: none; }
-      .brand { flex: 1; }
-    }
 
     .app {
       display: flex;
@@ -1441,6 +1362,67 @@
     box-shadow: inset 0 0 0 1px var(--border-strong);
   }
 
+  /* ---------- Settings: account row ---------- */
+  .account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  .account-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+  .account-info .dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 8px #34d399;
+  }
+
+  .account-label { font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+
+  .account-code {
+    margin-top: 1px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .account-logout {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-soft);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    transition: color .15s, background .15s, border-color .15s;
+  }
+
+  .account-logout svg { width: 15px; height: 15px; }
+
+  .account-logout:hover {
+    color: #f87171;
+    background: rgba(239,68,68,.08);
+    border-color: rgba(239,68,68,.4);
+  }
+
+  /* hide login screen while a saved code logs in automatically */
+  html.has-saved-login .auth-screen { display: none; }
+
   /* ---------- Light theme ---------- */
   :root[data-theme="light"] {
     color-scheme: light;
@@ -1488,7 +1470,7 @@
   :root[data-theme="light"] .upload-queue-item.done .q-status { color: #059669; }
 
   :root[data-theme="light"] .pl-action.danger:hover,
-  :root[data-theme="light"] .brand-user .logout:hover { color: #dc2626; }
+  :root[data-theme="light"] .account-logout:hover { color: #dc2626; }
 
   @media (max-width: 760px) {
     :root[data-theme="light"] .player { box-shadow: none; }
@@ -1566,24 +1548,6 @@
         </svg>
       </button>
 
-      <div class="brand-user">
-        <span class="dot"></span>
-        <span class="code-text" id="userCodeDisplay">----</span>
-        <button class="logout" id="logoutBtn" title="Log out" aria-label="Log out">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-        </button>
-      </div>
-
-      <a class="brand-contact" href="tel:+9633315177" title="Call KCST Media Technology">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>
-        </svg>
-        96 333151 77
-      </a>
     </div>
   </header>
 
@@ -1728,7 +1692,7 @@
       </div>
       <div style="flex:1; min-width:0;">
         <div class="upload-modal-title" id="settingsModalTitle">Settings</div>
-        <div class="upload-modal-subtitle">Customize how the player looks</div>
+        <div class="upload-modal-subtitle">Appearance and account</div>
       </div>
     </div>
 
@@ -1741,6 +1705,25 @@
       <button type="button" data-theme-option="light" role="radio" aria-checked="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
         Light
+      </button>
+    </div>
+
+    <div class="settings-section-title">Account</div>
+    <div class="account-row">
+      <div class="account-info">
+        <span class="dot"></span>
+        <div>
+          <div class="account-label">Login code · saved on this device</div>
+          <div class="account-code" id="userCodeDisplay">----</div>
+        </div>
+      </div>
+      <button type="button" class="account-logout" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Log out
       </button>
     </div>
 
@@ -1913,6 +1896,18 @@ let lastScrolledIndex = -1;
 let uploadQueueState  = [];
 let currentUploadIndex = 0;
 
+/* Saved login code (stored in this browser only) */
+const LOGIN_KEY = 'kcst-login-code';
+
+function getSavedCode() {
+  try {
+    const c = localStorage.getItem(LOGIN_KEY);
+    return /^\d{4}$/.test(c || '') ? c : null;
+  } catch (_) { return null; }
+}
+function saveLoginCode(code) { try { localStorage.setItem(LOGIN_KEY, code); } catch (_) {} }
+function clearSavedCode()    { try { localStorage.removeItem(LOGIN_KEY); } catch (_) {} }
+
 /* ============================================================
    HELPERS
    ============================================================ */
@@ -2041,6 +2036,7 @@ async function handleAuthSubmit() {
 
     // 3. Success — log in
     currentUserCode = code;
+    saveLoginCode(code);
     loginAsUser(code);
 
   } catch (err) {
@@ -2074,6 +2070,9 @@ function loginAsUser(code) {
 }
 
 function logout() {
+  clearSavedCode();
+  root.classList.remove('has-saved-login');
+  settingsModal.classList.remove('show');
   currentUserCode = null;
   songs = [];
   currentIndex = 0;
@@ -3076,7 +3075,15 @@ document.addEventListener('keydown', (e) => {
    ============================================================ */
 updateVolumeUI();
 requestAnimationFrame(progressLoop);
-authInputs[0].focus();
+
+const savedCode = getSavedCode();
+if (savedCode) {
+  currentUserCode = savedCode;
+  loginAsUser(savedCode);
+} else {
+  authInputs[0].focus();
+}
+root.classList.remove('has-saved-login');
 </script>
 </body>
 </html>
