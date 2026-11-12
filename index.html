@@ -1201,6 +1201,20 @@
     input[type="range"]::-webkit-slider-thumb { opacity: 1; }
   }
 
+  /* ---------- Playlist show / hide ---------- */
+  .brand-header-right .header-btn.active {
+    color: var(--accent);
+    background: rgba(139,92,246,.12);
+    border-color: rgba(139,92,246,.35);
+  }
+
+  .app.playlist-hidden {
+    grid-template-columns: minmax(300px, 400px);
+    justify-content: center;
+  }
+
+  .app.playlist-hidden .playlist-panel { display: none; }
+
   /* ---------- Responsive: phone = app layout ---------- */
   @media (max-width: 760px) {
     html, body { height: auto; }
@@ -1271,6 +1285,11 @@
 
     .brand-footer { display: none; }
 
+    @media (max-width: 420px) {
+      .brand-text { display: none; }
+      .brand { flex: 1; }
+    }
+
     .app {
       display: flex;
       flex-direction: column;
@@ -1321,6 +1340,13 @@
       width: 16px;
       height: 16px;
       margin-top: -5px;
+    }
+
+    /* Playlist hidden: player takes the whole screen */
+    .app.playlist-hidden .player { flex: 1; justify-content: center; }
+    .app.playlist-hidden .media-stage {
+      width: min(78vw, 340px);
+      width: min(78vw, 340px, 44dvh);
     }
 
     /* Library: bottom sheet that scrolls */
@@ -1526,6 +1552,13 @@
     </div>
 
     <div class="brand-header-right">
+      <button class="icon-btn header-btn active" id="playlistToggleBtn" title="Hide playlist" aria-label="Hide playlist" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+      </button>
+
       <button class="icon-btn header-btn" id="settingsBtn" title="Settings" aria-label="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>
@@ -1812,6 +1845,8 @@ const uploadQueue       = document.getElementById('uploadQueue');
 const uploadCloseBtn    = document.getElementById('uploadCloseBtn');
 const uploadDoneBtn     = document.getElementById('uploadDoneBtn');
 
+const playlistToggleBtn = document.getElementById('playlistToggleBtn');
+const appGrid         = document.querySelector('.app');
 const settingsBtn     = document.getElementById('settingsBtn');
 const settingsModal   = document.getElementById('settingsModal');
 const settingsDoneBtn = document.getElementById('settingsDoneBtn');
@@ -2550,6 +2585,39 @@ document.addEventListener('keydown', (e) => {
 });
 
 applyTheme(root.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
+
+/* ============================================================
+   SHOW / HIDE PLAYLIST
+   ============================================================ */
+const PLAYLIST_KEY = 'kcst-playlist-hidden';
+
+function setPlaylistHidden(hidden, persist = true) {
+  appGrid.classList.toggle('playlist-hidden', hidden);
+
+  const label = hidden ? 'Show playlist' : 'Hide playlist';
+  playlistToggleBtn.classList.toggle('active', !hidden);
+  playlistToggleBtn.setAttribute('aria-pressed', hidden ? 'false' : 'true');
+  playlistToggleBtn.setAttribute('aria-label', label);
+  playlistToggleBtn.title = label;
+
+  if (!hidden) {
+    // bring the playing song back into view once the list is visible again
+    lastScrolledIndex = -1;
+    requestAnimationFrame(scrollActiveIntoView);
+  }
+
+  if (persist) {
+    try { localStorage.setItem(PLAYLIST_KEY, hidden ? '1' : '0'); } catch (_) {}
+  }
+}
+
+playlistToggleBtn.addEventListener('click', () => {
+  setPlaylistHidden(!appGrid.classList.contains('playlist-hidden'));
+});
+
+try {
+  if (localStorage.getItem(PLAYLIST_KEY) === '1') setPlaylistHidden(true, false);
+} catch (_) {}
 
 /* ============================================================
    RENAME TRACK
