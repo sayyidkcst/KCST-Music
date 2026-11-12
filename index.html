@@ -1891,6 +1891,8 @@ let currentIndex      = 0;
 let isShuffle         = false;
 let repeatMode        = 'off';
 let isSeeking         = false;
+let wantPlaying       = false;  // true after the user (or auto-next) started playback
+let resumeOnVisible   = false;
 let lastVolume        = 1;
 let lastScrolledIndex = -1;
 let uploadQueueState  = [];
@@ -2053,6 +2055,7 @@ function loginAsUser(code) {
   appPage.classList.remove('app-hidden');
 
   // Reset player state
+  wantPlaying = false;
   songs = [];
   currentIndex = 0;
   lastScrolledIndex = -1;
@@ -2070,6 +2073,7 @@ function loginAsUser(code) {
 }
 
 function logout() {
+  wantPlaying = false;
   clearSavedCode();
   root.classList.remove('has-saved-login');
   settingsModal.classList.remove('show');
@@ -2512,6 +2516,7 @@ async function deleteTrack(song, index) {
     }
 
     if (index === currentIndex) {
+      wantPlaying = false;
       audio.pause();
       audio.removeAttribute('src');
       audio.load();
@@ -2768,6 +2773,7 @@ function syncVideoToAudio() {
 
 function play() {
   if (!songs.length) return;
+  wantPlaying = true;
   audio.play().catch(err => console.warn('Playback blocked:', err));
 
   const song = songs[currentIndex];
@@ -2779,6 +2785,7 @@ function play() {
 }
 
 function pause() {
+  wantPlaying = false;
   audio.pause();
   if (!videoEl.paused) {
     try { videoEl.pause(); } catch (_) {}
@@ -2976,17 +2983,83 @@ function updateMediaSession() {
   });
 }
 
+function setPlaybackState(state) {
+  if (!('mediaSession' in navigator)) return;
+  try { navigator.mediaSession.playbackState = state; } catch (_) {}
+}
+
+let lastPositionUpdate = 0;
+function updatePositionState(force) {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+  if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+  const now = Date.now();
+  if (!force && now - lastPositionUpdate < 1000) return;
+  lastPositionUpdate = now;
+  try {
+    navigator.mediaSession.setPositionState({
+      duration: audio.duration,
+      playbackRate: audio.playbackRate || 1,
+      position: Math.min(Math.max(audio.currentTime, 0), audio.duration)
+    });
+  } catch (_) {}
+}
+
+function seekTo(t) {
+  if (!Number.isFinite(audio.duration)) return;
+  const time = Math.min(Math.max(t, 0), audio.duration);
+  audio.currentTime = time;
+  try { videoEl.currentTime = time; } catch (_) {}
+  updatePositionState(true);
+}
+
+// These events keep firing while the page is in the background (unlike requestAnimationFrame)
+audio.addEventListener('play',           () => setPlaybackState('playing'));
+audio.addEventListener('pause',          () => setPlaybackState('paused'));
+audio.addEventListener('loadedmetadata', () => updatePositionState(true));
+audio.addEventListener('seeked',         () => updatePositionState(true));
+audio.addEventListener('timeupdate',     () => updatePositionState(false));
+
 if ('mediaSession' in navigator) {
   const handlers = {
     play: play,
     pause: pause,
+    stop: pause,
     previoustrack: prevSong,
-    nexttrack: nextSong
+    nexttrack: nextSong,
+    seekto: (d) => { if (d && d.seekTime != null) seekTo(d.seekTime); },
+    seekbackward: (d) => seekTo(audio.currentTime - ((d && d.seekOffset) || 10)),
+    seekforward:  (d) => seekTo(audio.currentTime + ((d && d.seekOffset) || 10))
   };
   for (const [action, fn] of Object.entries(handlers)) {
     try { navigator.mediaSession.setActionHandler(action, fn); } catch (_) {}
   }
 }
+
+/* ============================================================
+   BACKGROUND PLAYBACK
+   - audio keeps playing when the browser is minimized
+   - the (muted) video picture is paused while hidden, since browsers
+     stop video in the background and that can disturb the audio
+   - if the browser still paused the audio, resume when coming back
+   ============================================================ */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    resumeOnVisible = wantPlaying && !audio.paused;
+    if (!videoEl.paused) { try { videoEl.pause(); } catch (_) {} }
+    return;
+  }
+
+  if (resumeOnVisible && wantPlaying && audio.paused && !audio.ended && audio.getAttribute('src')) {
+    audio.play().catch(() => {});
+  }
+  resumeOnVisible = false;
+
+  const song = songs[currentIndex];
+  if (song && song.is_video && !audio.paused) {
+    syncVideoToAudio();
+    videoEl.play().catch(() => {});
+  }
+});
 
 /* ============================================================
    UPLOAD UI
