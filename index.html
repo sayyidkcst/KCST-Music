@@ -633,55 +633,6 @@
     padding: 0 10px 12px;
   }
 
-  /* ---------- Upload (at top) ---------- */
-  .upload-section {
-    padding: 0 10px 16px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  .upload-btn {
-    width: 100%;
-    padding: 11px 16px;
-    border-radius: 12px;
-    background: linear-gradient(180deg, rgba(139,92,246,.14), rgba(139,92,246,.06));
-    border: 1px solid rgba(139,92,246,.35);
-    color: var(--text);
-    font-size: 13px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: background .15s, border-color .15s, color .15s, transform .1s;
-  }
-
-  .upload-btn:hover {
-    background: linear-gradient(180deg, rgba(139,92,246,.22), rgba(139,92,246,.10));
-    border-color: var(--accent);
-    transform: translateY(-1px);
-  }
-
-  .upload-btn:active {
-    transform: translateY(0);
-  }
-
-  .upload-btn svg {
-    width: 16px;
-    height: 16px;
-    color: var(--accent);
-  }
-
-  .upload-hint {
-    font-size: 10.5px;
-    color: var(--muted-2);
-    text-align: center;
-    margin-top: 8px;
-    letter-spacing: .02em;
-  }
-
   /* ---------- Playlist ---------- */
   #playlist {
     list-style: none;
@@ -1282,9 +1233,6 @@
     }
 
     .playlist-panel h2 { padding: 0 16px 10px; }
-    .upload-section { padding: 0 12px 12px; margin-bottom: 8px; }
-    .upload-hint { display: none; }
-    .upload-btn { padding: 13px 16px; font-size: 14px; border-radius: 14px; }
 
     #playlist { gap: 2px; overscroll-behavior: contain; }
     .playlist-item { padding: 9px 10px; }
@@ -1308,7 +1256,28 @@
     .upload-modal-btn { padding: 12px 18px; }
   }
 
+  /* ---------- Status toast (visible even when the playlist is hidden) ---------- */
+  .status-msg {
+    position: fixed;
+    z-index: 60;
+    left: 50%;
+    top: calc(68px + env(safe-area-inset-top, 0px));
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: min(92vw, 420px);
+    margin: 0;
+    padding: 10px 14px;
+    font-size: 13px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 14px 32px -12px rgba(0,0,0,.55);
+  }
+  .status-msg.error, .status-msg.success { background-color: var(--surface); }
+  .status-msg.error   { background-image: linear-gradient(rgba(239,68,68,.12), rgba(239,68,68,.12)); }
+  .status-msg.success { background-image: linear-gradient(rgba(52,211,153,.12), rgba(52,211,153,.12)); }
+
   /* ---------- Settings: header button + theme switch ---------- */
+  .brand-header-right .header-btn.upload { color: var(--accent); }
   .header-btn { flex-shrink: 0; }
   .brand-header-right .header-btn {
     width: 36px;
@@ -1534,6 +1503,14 @@
     </div>
 
     <div class="brand-header-right">
+      <button class="icon-btn header-btn upload" id="uploadBtn" title="Upload audio / video" aria-label="Upload audio or video">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </button>
+
       <button class="icon-btn header-btn active" id="playlistToggleBtn" title="Hide playlist" aria-label="Hide playlist" aria-pressed="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
@@ -1619,20 +1596,6 @@
     <aside class="playlist-panel">
       <h2>Your Library</h2>
 
-      <div class="upload-section">
-        <button class="upload-btn" id="uploadBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          <span id="uploadLabel">Upload Audio / Video</span>
-        </button>
-        <input type="file" id="fileInput" accept="audio/*,video/*,.mp4,.webm,.mov,.m4v,.mp3,.wav,.ogg,.m4a,.aac,.flac" hidden multiple>
-        <div class="status-msg" id="statusMsg"></div>
-        <div class="upload-hint">Supports MP3, WAV, OGG, FLAC, MP4, WEBM, MOV</div>
-      </div>
-
       <ul id="playlist"></ul>
     </aside>
   </div>
@@ -1679,6 +1642,9 @@
     </div>
   </div>
 </div>
+
+<input type="file" id="fileInput" accept="audio/*,video/*,.mp4,.webm,.mov,.m4v,.mp3,.wav,.ogg,.m4a,.aac,.flac" hidden multiple>
+<div class="status-msg" id="statusMsg" role="status" aria-live="polite"></div>
 
 <!-- ============ SETTINGS MODAL ============ -->
 <div class="upload-modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
@@ -1814,7 +1780,6 @@ const muteBtn     = document.getElementById('mute');
 const volumeInput = document.getElementById('volume');
 const playlistEl  = document.getElementById('playlist');
 const uploadBtn   = document.getElementById('uploadBtn');
-const uploadLabel = document.getElementById('uploadLabel');
 const fileInput   = document.getElementById('fileInput');
 const statusMsg   = document.getElementById('statusMsg');
 const root        = document.documentElement;
@@ -1930,13 +1895,14 @@ function colorsFromString(str) {
   return [`hsl(${h1}, 70%, 55%)`, `hsl(${h2}, 75%, 55%)`];
 }
 
+let statusTimer = null;
 function showStatus(msg, type = 'error') {
   statusMsg.textContent = msg;
   statusMsg.className = 'status-msg ' + type;
-  if (type === 'success') {
-    setTimeout(() => { statusMsg.className = 'status-msg'; }, 3000);
-  }
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => { statusMsg.className = 'status-msg'; }, type === 'success' ? 3000 : 6000);
 }
+statusMsg.addEventListener('click', () => { statusMsg.className = 'status-msg'; });
 
 function showAuthError(msg) {
   authError.textContent = msg;
