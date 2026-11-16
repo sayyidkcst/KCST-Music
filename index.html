@@ -1866,6 +1866,21 @@ let currentUploadIndex = 0;
 /* Saved login code (stored in this browser only) */
 const LOGIN_KEY = 'kcst-login-code';
 
+/* Last played song (stored in this browser only, per login code) */
+function lastSongKey() { return 'kcst-last-song-' + (currentUserCode || ''); }
+function saveLastSong(id) {
+  if (!currentUserCode || id == null) return;
+  try { localStorage.setItem(lastSongKey(), String(id)); } catch (_) {}
+}
+function getLastSongIndex() {
+  try {
+    const id = localStorage.getItem(lastSongKey());
+    if (id == null) return 0;
+    const i = songs.findIndex(sg => String(sg.id) === id);
+    return i >= 0 ? i : 0;
+  } catch (_) { return 0; }
+}
+
 function getSavedCode() {
   try {
     const c = localStorage.getItem(LOGIN_KEY);
@@ -2226,7 +2241,7 @@ async function fetchTracks() {
   lastScrolledIndex = -1;
 
   if (songs.length) {
-    loadSong(0);
+    loadSong(getLastSongIndex());
   } else {
     titleEl.textContent = 'No track selected';
     artistEl.textContent = 'Upload a song or video to get started';
@@ -2649,6 +2664,10 @@ async function saveRename(e) {
     song.title  = title;
     song.artist = artist;
 
+    // Saved: close the popup right away, then refresh the UI
+    closeRenameModal();
+    showStatus('Renamed to "' + title + '"', 'success');
+
     // Update the row in place so the list keeps its scroll position
     const li = playlistEl.querySelectorAll('.playlist-item')[idx];
     if (li) {
@@ -2665,11 +2684,12 @@ async function saveRename(e) {
       artistEl.textContent = artist;
       updateMediaSession();
     }
-
-    closeRenameModal();
-    showStatus('Renamed to "' + title + '"', 'success');
   } catch (err) {
     console.error('Rename failed:', err);
+    if (!renameModal.classList.contains('show')) {
+      // Already saved and closed; only the UI refresh failed
+      return;
+    }
     showRenameError(err.message || 'Rename failed');
     renameSaveBtn.disabled = false;
     renameSaveBtn.textContent = 'Save';
@@ -2678,12 +2698,7 @@ async function saveRename(e) {
 
 renameForm.addEventListener('submit', saveRename);
 renameCancelBtn.addEventListener('click', closeRenameModal);
-renameModal.addEventListener('click', (e) => {
-  if (e.target === renameModal) closeRenameModal();
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && renameModal.classList.contains('show')) closeRenameModal();
-});
+/* Rename popup closes only via the Cancel button (or after a successful Save) */
 
 /* ============================================================
    PLAYBACK CORE
@@ -2696,6 +2711,7 @@ function loadSong(index) {
   const trackChanged = previousIndex !== currentIndex;
 
   const song = songs[currentIndex];
+  saveLastSong(song.id);
   const colors = song.colors || colorsFromString(song.title || 'x');
 
   titleEl.textContent = song.title || 'Untitled';
@@ -2942,11 +2958,13 @@ audio.addEventListener('error', () => {
 function updateMediaSession() {
   if (!('mediaSession' in navigator) || !songs[currentIndex]) return;
   const song = songs[currentIndex];
-  navigator.mediaSession.metadata = new MediaMetadata({
-    title: song.title,
-    artist: song.artist,
-    album: 'KCST Music Player'
-  });
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: song.title,
+      artist: song.artist,
+      album: 'KCST Music Player'
+    });
+  } catch (_) {}
 }
 
 function setPlaybackState(state) {
